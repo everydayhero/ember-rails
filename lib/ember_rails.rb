@@ -9,6 +9,7 @@ module Ember
   module Rails
     class Railtie < ::Rails::Railtie
       config.ember = ActiveSupport::OrderedOptions.new
+      config.ember.bundle_source = true
 
       generators do |app|
         app ||= ::Rails.application # Rails 3.0.x does not yield `app`
@@ -22,15 +23,22 @@ module Ember
 
       initializer "ember_rails.setup_vendor", :after => "ember_rails.setup", :group => :all do |app|
         variant = app.config.ember.variant || (::Rails.env.production? ? :production : :development)
-
-        # Copy over the desired ember, ember-data, and handlebars bundled in
-        # ember-source, ember-data-source, and handlebars-source to a tmp folder.
-        tmp_path = app.root.join("tmp/ember-rails")
         ext = variant == :production ? ".prod.js" : ".js"
-        FileUtils.mkdir_p(tmp_path)
-        FileUtils.cp(::Ember::Source.bundled_path_for("ember#{ext}"), tmp_path.join("ember.js"))
-        FileUtils.cp(::Ember::Data::Source.bundled_path_for("ember-data#{ext}"), tmp_path.join("ember-data.js"))
-        app.assets.append_path(tmp_path)
+
+        ember_source_path = ::Ember::Source.bundled_path_for("ember#{ext}")
+        ember_data_source_path = ::Ember::Data::Source.bundled_path_for("ember-data#{ext}")
+
+        if app.config.ember.bundle_source
+          # Copy over the desired ember, ember-data, and handlebars bundled in
+          # ember-source, ember-data-source, and handlebars-source to a tmp folder.
+          tmp_path = app.root.join("tmp/ember-rails")
+          FileUtils.cp(ember_source_path, tmp_path.join("ember.js"))
+          FileUtils.cp(ember_data_source_path, tmp_path.join("ember-data.js"))
+          app.assets.append_path(tmp_path)
+        else
+          app.assets.append_path(File.dirname(ember_data_source_path))
+          app.assets.append_path(File.dirname(ember_source_path))
+        end
 
         # Make the handlebars.js and handlebars.runtime.js bundled
         # in handlebars-source available.
