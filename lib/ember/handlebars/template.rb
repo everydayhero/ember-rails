@@ -1,6 +1,7 @@
 require 'sprockets'
 require 'sprockets/engines'
 require 'barber'
+require 'tilt'
 
 module Ember
   module Handlebars
